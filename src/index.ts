@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 import * as action from '@actions/core';
 import dotenv from 'dotenv';
+import * as github from '@actions/github';
 
 dotenv.config();
 
@@ -9,7 +10,7 @@ const headers: any = {
   'X-Holistics-Key': process.env.HOLISTICS_API_KEY,
 }
 
-const HOLISTICS_HOST = 'http://127.0.0.1:3000';
+const HOLISTICS_HOST = process.env.HOLISTICS_HOST ?? 'https://secure.holistics.io';
 const HOLISTICS_API_HOST = `${HOLISTICS_HOST}/api/v2`;
 
 async function submitValidate (commitOid: string, branchName: string) {
@@ -52,7 +53,10 @@ async function polling(jobId: number) {
 
 async function run () {
   try {
-    const job = await submitValidate('791c8dd7438bca5b1c3305b07925d3f47ef8fa88', 'develop');
+    const ref = github.context.ref;
+    const branchName = ref.replace('refs/heads/', '');
+    const commitOid = github.context.sha;
+    const job = await submitValidate(commitOid, branchName);
     const result = await polling(job.id) as any;
     console.log(JSON.stringify(result, null, 2));
     if (result.status === 'failure') {
